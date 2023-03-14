@@ -46,12 +46,12 @@ def _plot (tree, ll, side, fig, ax):
             _plot(tree.children[i], lls[i], half_side, fig, ax)
 
 
-def animate_simulation(filename, ll = None, ur = None):
+def animate_simulation(filepath, ll = None, ur = None, result_fps = 24):
     """
     Animate simulation using pre-computed data, save the result
     ll and ur specify bounding box
     """
-    file = open("data/"+filename+".sim", "r")
+    file = open(filepath, "r")
     datalines = file.readlines()
 
     # process the data
@@ -69,25 +69,17 @@ def animate_simulation(filename, ll = None, ur = None):
     # convert ticks and the lists within it to numpy arrays for plotting
     ticks = np.array([np.array(tick) for tick in ticks])
 
-    fig = plt.figure(figsize=(15,15))
+    fig = plt.figure()
+    ax = plt.axes(xlim=(ll[0], ur[0]), ylim=(ll[1], ur[1]))
 
     def update(i):
-        return ticks[i]
+        ax.clear()
+        ax.set_facecolor('k')
+        plt.scatter(ticks[i][:, 0], ticks[i][:, 1], c="w", marker=".", s=10)
+        ax.set_xlim([ll[0], ur[0]])
+        ax.set_ylim([ll[1], ur[1]])
 
-    ani = FuncAnimation(fig, update, interval=300)
-    ani.save('animation.gif', writer='imagemagick', fps=4)
-    plt.show()
-
-    # # animate data
-    # fig = plt.figure()
-    # camera = Camera(fig)
-    # for tick in ticks:
-    #     plt.scatter(tick[:,0], tick[:,1], c="#4EACC5", marker=".", s=10)
-    #     camera.snap()
-    # animation = camera.animate()
-    # # if the simulation is empty, raise exception
-    # try:
-    #     animation.save(filename + "_anim.gif", writer = 'imagemagick')
-    # except IndexError:
-    #     # index error raised, presumably, because the "snap" list is empty
-    #     raise Exception("Simulation empty")
+    ani = FuncAnimation(fig, update, interval=int(1000/result_fps))
+    filename = filepath.split("/")[-1] # last thing in the file address
+    file_no_ext = filename.split(".")[0] # remove extension
+    ani.save("../visualizations/"+file_no_ext+".gif", fps=result_fps)
