@@ -2,6 +2,7 @@ import grav_sim as g
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from matplotlib.animation import FuncAnimation
 
 def plot_tree (tree, particles, fig, ax):
     """
@@ -45,4 +46,48 @@ def _plot (tree, ll, side, fig, ax):
             _plot(tree.children[i], lls[i], half_side, fig, ax)
 
 
+def animate_simulation(filename, ll = None, ur = None):
+    """
+    Animate simulation using pre-computed data, save the result
+    ll and ur specify bounding box
+    """
+    file = open("data/"+filename+".sim", "r")
+    datalines = file.readlines()
 
+    # process the data
+    ticks = []
+    curr_tick = []
+    for line in datalines:
+        if line == "#\n":
+            ticks.append(curr_tick)
+            curr_tick = []
+        else:
+            data_li = line[:-1].split()
+            position = np.array([float(data_li[0]), float(data_li[1])])
+            curr_tick.append(position)
+
+    # convert ticks and the lists within it to numpy arrays for plotting
+    ticks = np.array([np.array(tick) for tick in ticks])
+
+    fig = plt.figure(figsize=(15,15))
+
+    def update(i):
+        return ticks[i]
+
+    ani = FuncAnimation(fig, update, interval=300)
+    ani.save('animation.gif', writer='imagemagick', fps=4)
+    plt.show()
+
+    # # animate data
+    # fig = plt.figure()
+    # camera = Camera(fig)
+    # for tick in ticks:
+    #     plt.scatter(tick[:,0], tick[:,1], c="#4EACC5", marker=".", s=10)
+    #     camera.snap()
+    # animation = camera.animate()
+    # # if the simulation is empty, raise exception
+    # try:
+    #     animation.save(filename + "_anim.gif", writer = 'imagemagick')
+    # except IndexError:
+    #     # index error raised, presumably, because the "snap" list is empty
+    #     raise Exception("Simulation empty")
