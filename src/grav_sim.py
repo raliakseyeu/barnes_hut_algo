@@ -2,8 +2,10 @@
 An 2D implementation of the Barnes-Hut algorithm
 """
 import numpy as np
+import random
+import math
 
-G = 0.01 # gravity constant 
+G = 1e-5 # gravity constant 
 
 class Cell:
     def __init__(self, children, particles, width):
@@ -36,6 +38,8 @@ def generate_tree (particles):
     Input:
         particles: np.ndarray(Particle)
     """
+    particles = np.array(particles) # just in case it isn't already
+
     # figure out the square within which we are working
     positions = np.array([p.position for p in particles])
     min_x = np.amin(positions[:, 0])
@@ -54,6 +58,12 @@ def generate_tree (particles):
 def divide_cell (cell, particles, ll, side):
     """
     Subdivide this given cell until each leaf node contains at most one particle
+
+    Input:
+        cell: grav_sim.Cell
+        particles: np.ndarray(grav_sim.Cell)
+        ll: np.ndarray(float)
+        ur: np.ndarray(float)
     """
     if len(particles) <= 1:
         # subdivision complete
@@ -80,7 +90,7 @@ def divide_cell (cell, particles, ll, side):
         divide_cell(cell_i, cell_i_particles, lls[i], half_side)
 
 
-def record_simulation(particles, time, filename, theta = 1):
+def record_simulation(particles, time, filename, theta = 1, report = False):
     """
     Process the simulation, store the result in a [filename].sim file in the 
     data folder
@@ -88,11 +98,14 @@ def record_simulation(particles, time, filename, theta = 1):
     # TODO: implement multithreading
 
     # create file 
-    file = open("data/"+filename+".sim", "w")
+    file = open("../data/"+filename+".sim", "w")
 
     for i in range(time):
         calculate_tick(particles, theta, file)
+        if report: print("creating simulation file: tick "+str(i)+"/"+str(time)+\
+                         " processed")
 
+    if report: print("simulation processing complete")
     file.close()
 
 
@@ -136,3 +149,41 @@ def compute_force(tree, particle, theta):
     else:
         # recurse down
         return sum([compute_force(c, particle, theta) for c in tree.children])
+    
+
+def create_particle_blobs(n, particle_mass, center, radius):
+    """
+    Create a non-uniform particle blob to test "galaxy" collisions
+    """ 
+    particles = []
+
+    for i in range(n):
+        # note: this method results in a non-uniform distribution of particles
+        # and this is what I want since in real galaxies stars are denser closer
+        # to the core, which is what this method will give
+
+        # get polar coordinates, convert to cartesian
+        hole = 0.1 # needed to make sure the cluster doesn't self destruct
+
+        # TODO: add a 'supermassive black hole' to the middle to stabilize 
+        # everything
+
+        r = (1 - hole) * radius * random.random() + hole * radius
+        theta = 2 * math.pi * random.random()
+        x = r * math.cos(theta)
+        y = r * math.sin(theta)
+        position = np.array(center) + np.array([x, y])
+
+        # make initial velocity the oribital velocity around center of mass in 
+        # the radial direction about COM
+        M = particle_mass * n
+        speed = math.sqrt((G * M)/r)
+        center_vec = np.array([x, y])
+        c_vec_unit = center_vec/np.linalg.norm(center_vec)
+        radial_vec = np.array([c_vec_unit[1], -1* c_vec_unit[0]])
+        velocity = radial_vec * speed
+
+        particle = Particle(position, particle_mass, velocity)
+        particles.append(particle)
+
+    return particles
